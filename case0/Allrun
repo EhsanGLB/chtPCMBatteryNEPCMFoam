@@ -1,0 +1,87 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # run from this directory
+
+#------------------------------- hemodynamic4Foam project -------------------------------#
+#Author
+    #Ehsan Golab, SUT. All rights reserved.
+    #Ehsan1996Golab@gmail.com
+
+#--------------------------------------------------------------------------------------#
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# cleancase is function that removes the files and directories.(rm -f : remove the file, rm -r : remove the directory).
+cleancase ()
+{
+    rm -r Gnu*
+    rm -r processor*
+}
+
+
+# (getApplication) is an command to find the solver name from the controlDict file. Also, ($) use for the variable.
+application=$(getApplication)
+
+#cleancase
+#./Allclean
+
+
+# set value for variable
+tb_=8
+tt_=8
+
+
+r_=21
+rb_=`echo $r_+$tb_ | bc -l`
+rt_=`echo $r_+$tt_ | bc -l`
+
+t_=2
+rbe_=`echo $rb_+$t_ | bc -l`
+rte_=`echo $rt_+$t_ | bc -l`
+
+# set value for files
+sed -i "s/rbRef_/$rb_/" 		$curdir'constant/polyMesh/blockMeshDictVerticalConicalCylinderCHTLIB.m4'
+sed -i "s/rtRef_/$rt_/" 		$curdir'constant/polyMesh/blockMeshDictVerticalConicalCylinderCHTLIB.m4'
+sed -i "s/rbeRef_/$rbe_/" 		$curdir'constant/polyMesh/blockMeshDictVerticalConicalCylinderCHTLIB.m4'
+sed -i "s/rteRef_/$rte_/" 		$curdir'constant/polyMesh/blockMeshDictVerticalConicalCylinderCHTLIB.m4'
+
+
+
+
+echo run blockMesh ...
+m4 -P constant/polyMesh/blockMeshDictVerticalConicalCylinderCHTLIB.m4 > constant/polyMesh/blockMeshDict
+blockMesh
+#checkMesh
+
+
+
+# it can be used to create multi zones
+rm -rf constant/polyMesh/sets
+rm constant/polyMesh/sets/*_old
+rm constant/polyMesh/sets/*_old.gz
+setsToZones -noFlipMap
+splitMeshRegions -cellZones -overwrite
+
+mkdir -p 0.001/LIB
+mkdir -p 0.001/PCM
+mkdir -p 0.001/metalCover
+
+cp 0/* 0.001/LIB/
+cp 0/* 0.001/PCM/
+cp 0/* 0.001/metalCover/
+
+changeDictionary -region LIB
+changeDictionary -region PCM
+changeDictionary -region metalCover
+
+
+echo run solver ...
+$application
+
+# -------------------------------------------------------------------------- end-of-file
+
+
+
+
+
+
